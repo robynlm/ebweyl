@@ -327,6 +327,7 @@ class Weyl():
         Parameters : 
             Gudd3 : (3, 3, 3, N, N, N) array_like 
                     Spatial Christoffel symbol with one indice up and two down
+                    You can get this from Weyl.christoffel_symbol_udd3()
                 
         Returns : 
             (3, 3, N, N, N) array_like
@@ -352,8 +353,10 @@ class Weyl():
         Parameters : 
             Cdown4 : (4, 4, 4, 4, N, N, N) array_like
                      4D Weyl tensor with all indices down.
+                     You can get this from Weyl.weyl_tensor_down4(Endown3, Bndown3)
             uup4 : (4, N, N, N) array_like
                    Time-like vector with indice up
+                   You need to provide this
                 
         Returns : 
             (4, 4, N, N, N) array_like
@@ -368,9 +371,12 @@ class Weyl():
         Parameters : 
             Ricci3down3 : (3, 3, N, N, N) array_like 
                           Spatial Ricci tensor with both indices down
+                          You can get this from Weyl.ricci_tensor_down3(Gudd3)
             kappa : float, Einstein's constant = 8 * pi * G / c^4
+                    You need to provide this.
             Tdown4 : (4, 4, N, N, N) array_like
                      Spacetime stress-energy tensor with both indices down
+                     You need to provide this
                 
         Returns : 
             (3, 3, N, N, N) array_like
@@ -408,8 +414,10 @@ class Weyl():
         Parameters : 
             Cdown4 : (4, 4, 4, 4, N, N, N) array_like
                      4D Weyl tensor with all indices down.
+                     You can get this from Weyl.weyl_tensor_down4(Endown3, Bndown3)
             uup4 : (4, N, N, N) array_like
                    Time-like vector with indice up
+                   You need to provide this
                 
         Returns : 
             (4, 4, N, N, N) array_like
@@ -428,6 +436,7 @@ class Weyl():
         Parameters : 
             Gudd3 : (3, 3, 3, N, N, N) array_like 
                     Spatial Christoffel symbol with one indice up and two down
+                    You can get this from Weyl.christoffel_symbol_udd3()
                 
         Returns : 
             (3, 3, N, N, N) array_like
@@ -486,9 +495,12 @@ class Weyl():
         
         Parameters : 
             Endown3 : (3, 3, N, N, N) array_like
+                      You can get this from 
+                      Weyl.eweyl_n_tensor_down3(Ricci3down3, kappa, Tdown4)
             Bndown3 : (3, 3, N, N, N) array_like
                       Electric and magnetic parts of the Weyl tensor 
                       projected along the normal to the hypersurface.
+                      You can get this from Weyl.bweyl_n_tensor_down3(Gudd3)
         
         Returns : 
             (4, 4, 4, 4, N, N, N) array_like
@@ -527,6 +539,7 @@ class Weyl():
         Parameters : 
             Cdown4 : (4, 4, 4, 4, N, N, N) array_like
                      Weyl tensor with all indices down.
+                     You can get this from Weyl.weyl_tensor_down4(Endown3, Bndown3)
         
         Returns : 
             list : psi0, psi1, psi2, psi3, psi4
@@ -621,6 +634,7 @@ class Weyl():
         Parameters : 
             Psis : [psi0, psi1, psi2, psi3, psi4]
                    Each is a (N, N, N) array_like complex
+                   You can get this from Weyl.weyl_psi_scalars(Cdown4)
         
         Returns : 
             dictionary : I, J, L, K, N
@@ -661,6 +675,7 @@ class Weyl():
         Parameters : 
             Gudd3 : (3, 3, 3, N, N, N) array_like 
                     Spatial Christoffel symbol with one indice up and two down
+                    You can get this from Weyl.christoffel_symbol_udd3()
             fdown3 : (3, 3, N, N, N) array_like
                      Rank 2 spatial tensor with both indices down
         
@@ -682,6 +697,7 @@ class Weyl():
         Parameters : 
             Gudd3 : (3, 3, 3, N, N, N) array_like 
                     Spatial Christoffel symbol with one indice up and two down
+                    You can get this from Weyl.christoffel_symbol_udd3()
             fmixed3 : (3, 3, N, N, N) array_like
                       Rank 2 spatial tensor with one indice up and the other down
         
@@ -701,6 +717,7 @@ class Weyl():
         Parameters : 
             Gudd3 : (3, 3, 3, N, N, N) array_like 
                     Spatial Christoffel symbol with one indice up and two down
+                    You can get this from Weyl.christoffel_symbol_udd3()
             fdown3 : (3, 3, N, N, N) array_like
                      Rank 2 spatial tensor with both indices down
         
@@ -716,6 +733,7 @@ class Weyl():
         Parameters : 
             Gudd3 : (3, 3, 3, N, N, N) array_like 
                     Spatial Christoffel symbol with one indice up and two down
+                    You can get this from Weyl.christoffel_symbol_udd3()
             fdown3 : (3, 3, N, N, N) array_like
                      Rank 2 spatial tensor with both indices down
         
