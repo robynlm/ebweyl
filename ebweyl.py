@@ -270,14 +270,17 @@ class Weyl():
         self.gammaup3 = inverse3(self.gammadown3)
         # Shift
         self.betadown3 = np.array([gdown4[0, 1], gdown4[0, 2], gdown4[0, 3]])
+        self.betaup3 = np.einsum('ij..., i... -> j...', 
+                                 self.gammaup3, self.betadown3)
         # Lapse
-        self.alpha = np.sqrt(np.einsum('k..., i..., ki... -> ...', self.betadown3, 
-                                       self.betadown3, self.gammaup3) 
+        self.alpha = np.sqrt(np.einsum('k..., k... -> ...', 
+                                       self.betadown3, self.betaup3) 
                              - gdown4[0, 0])
         Box_0 = np.zeros(np.shape(self.alpha))
         # Normal to the hypersurface
         self.ndown4 = np.array([-self.alpha, Box_0, Box_0, Box_0])
-        self.nup4 = np.einsum('a..., ab... -> b...', self.ndown4, self.gup4)
+        self.nup4 = np.array(Box_0 + 1.0, -self.betaup3[0],
+                             -self.betaup3[1], -self.betaup3[2])/self.alpha
         # Extrinsic curvature
         self.Kdown3 = Kdown4[1:,1:]
         
@@ -462,8 +465,8 @@ class Weyl():
             same for the magnetic part.
         
         Warning : 
-            This is only for the electric and 
-            magnetic parts of the Weyl tensor projected along 
+            This is only for the extrinsic curvature, and the
+            electric and magnetic parts of the Weyl tensor projected along 
             the normal to the hypersurface.
         """
         fup3 = np.einsum('ib...,ja...,ab... -> ij...',
