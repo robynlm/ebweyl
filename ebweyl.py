@@ -279,8 +279,8 @@ class Weyl():
         Box_0 = np.zeros(np.shape(self.alpha))
         # Normal to the hypersurface
         self.ndown4 = np.array([-self.alpha, Box_0, Box_0, Box_0])
-        self.nup4 = np.array(Box_0 + 1.0, -self.betaup3[0],
-                             -self.betaup3[1], -self.betaup3[2])/self.alpha
+        self.nup4 = np.array([Box_0 + 1.0, -self.betaup3[0],
+                              -self.betaup3[1], -self.betaup3[2]])/self.alpha
         # Extrinsic curvature
         self.Kdown3 = Kdown4[1:,1:]
         
@@ -532,17 +532,17 @@ class Weyl():
             list : psi0, psi1, psi2, psi3, psi4
                    Each is (N, N, N) array_like complex
         """
-        lup, kup, mup, mbup = self.null_vector_base()
+        lup4, kup4, mup4, mbup4 = self.null_vector_base()
         psi0 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
-                         Cdown4, kup, mup, kup, mup)
+                         Cdown4, kup4, mup4, kup4, mup4)
         psi1 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
-                         Cdown4, kup, lup, kup, mup)
+                         Cdown4, kup4, lup4, kup4, mup4)
         psi2 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
-                         Cdown4, kup, mup, mbup, lup)
+                         Cdown4, kup4, mup4, mbup4, lup4)
         psi3 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
-                         Cdown4, kup, lup, mbup, lup)
+                         Cdown4, kup4, lup4, mbup4, lup4)
         psi4 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
-                         Cdown4, mbup, lup, mbup, lup)
+                         Cdown4, mbup4, lup4, mbup4, lup4)
 
         # As these are then used to compute the invariant scalars, here I check 
         # if psi4 = 0 while psi0 =/= 0.  If it is the case I need to switch
@@ -562,7 +562,7 @@ class Weyl():
         """Return an arbitrary null vector base.
         
         Returns : 
-            list : lup, kup, mup, mbup
+            list : lup4, kup4, mup4, mbup4
                    Each is (4, N, N, N) array_like complex
         
         Reference : 
@@ -570,13 +570,13 @@ class Weyl():
             by M. Alcubierre
             page 295
         """
-        e0, e1, e2, e3 = self.tetrad_base()
+        e0up4, e1up4, e2up4, e3up4 = self.tetrad_base()
         inverse_sqrt_2 = 1 / np.sqrt(2)
-        kup = (e0+e1) * inverse_sqrt_2
-        lup = (e0-e1) * inverse_sqrt_2
-        mup = (e2+1j*e3) * inverse_sqrt_2
-        mbup = (e2-1j*e3) * inverse_sqrt_2
-        return lup, kup, mup, mbup
+        kup4 = (e0up4+e1up4) * inverse_sqrt_2
+        lup4 = (e0up4-e1up4) * inverse_sqrt_2
+        mup4 = (e2up4+1j*e3up4) * inverse_sqrt_2
+        mbup4 = (e2up4-1j*e3up4) * inverse_sqrt_2
+        return lup4, kup4, mup4, mbup4
 
     def tetrad_base(self):
         """Return an arbitrary orthonormal tetrad base.
@@ -586,29 +586,34 @@ class Weyl():
         with the Gram-Schmidt scheme.
         
         Returns : 
-            list : e0, e1, e2, e3
-                   Each is (4, N, N, N) array_like        
+            list : e0up4, e1up4, e2up4, e3up4
+                   Each is (4, N, N, N) array_like      
+                   
+        Reference :
+            See Chapter 7 of 
+            'Linear Algebra, Theory and applications' by W.Cheney and D.Kincaid
+            for Gram-Schmidt scheme
         """
         Box_0 = np.zeros(np.shape(self.alpha))
-        
         v1 = np.array([Box_0, 1.0/np.sqrt(self.gdown4[1,1]), Box_0, Box_0])
         v2 = np.array([Box_0, Box_0, 1.0/np.sqrt(self.gdown4[2,2]), Box_0])
         v3 = np.array([Box_0, Box_0, Box_0, 1.0/np.sqrt(self.gdown4[3,3])])
 
-        u0 = self.nup4
-        u1 = v1 - self.vector_projection4(u0, v1)
-        u2 = (v2 - self.vector_projection4(u0, v2) 
-              - self.vector_projection4(u1, v2))
-        u3 = (v3 - self.vector_projection4(u0, v3) 
-              - self.vector_projection4(u1, v3) 
-              - self.vector_projection4(u2, v3))
+        e0up4 = self.nup4
+        
+        u1 = v1 - self.vector_inner_product(e0up4, v1)*e0up4
+        e1up4 = u1 / self.norm_rank1tensor4(u1)
+        
+        u2 = (v2 - self.vector_inner_product(e0up4, v2)*e0up4 
+              - self.vector_inner_product(e1up4, v2)*e1up4)
+        e2up4 = u2 / self.norm_rank1tensor4(u2)
+        
+        u3 = (v3 - self.vector_inner_product(e0up4, v3)*e0up4 
+              - self.vector_inner_product(e1up4, v3)*e1up4
+              - self.vector_inner_product(e2up4, v3)*e2up4)
+        e3up4 = u3 / self.norm_rank1tensor4(u3)
 
-        e0 = u0 / self.norm_rank1tensor4(u0)
-        e1 = u1 / self.norm_rank1tensor4(u1)
-        e2 = u2 / self.norm_rank1tensor4(u2)
-        e3 = u3 / self.norm_rank1tensor4(u3)
-
-        return e0, e1, e2, e3
+        return e0up4, e1up4, e2up4, e3up4
     
     def invariant_scalars(self, Psis):
         """Compute scalar invariants used for Petrov classification.
@@ -721,12 +726,17 @@ class Weyl():
         LCuud3 = np.einsum('ae..., bf..., d..., defc... -> abc...', 
                            self.gup4, self.gup4, self.nup4, 
                            self.levicivita_tensor_down4())[1:, 1:, 1:]
-        return symmetrise_tensor(np.einsum('cda...,cbd...->ab...',LCuud3, Ddfdd))
+        return symmetrise_tensor(np.einsum('cda..., cbd... -> ab...', 
+                                           LCuud3, Ddfdd))
+    
+    def vector_inner_product(self, a, b):
+        """Inner product of vectors, or of rank 1 4D tensors with indices up."""
+        return np.einsum('a..., b..., ab... -> ...', a, b, self.gdown4)
 
     def vector_projection4(self, a, b): 
         """Project vector b onto vector a."""        
-        return (np.einsum('a..., b..., ab... -> ...', a, b, self.gdown4) 
-                * a / np.einsum('a..., b..., ab... -> ...', a, a, self.gdown4))
+        return (self.vector_inner_product(a, b) * a 
+                / self.vector_inner_product(a, a) )
 
     def trace_rank2tensor3(self, fdown3):
         """Compute trace of a 3D rank 2 tensor."""
@@ -734,7 +744,7 @@ class Weyl():
     
     def norm_rank1tensor4(self, a): 
         """Compute norm of a 4D rank 1 tensor."""
-        return np.sqrt(abs(np.einsum('a..., b..., ab... -> ...',a,a,self.gdown4)))
+        return np.sqrt(abs(self.vector_inner_product(a, a)))
     
     def norm_rank2tensor3(self, fdown3):
         """Compute norm of a 3D rank 2 tensor."""
@@ -867,10 +877,12 @@ def inverse4(f):
     
     
 def symmetrise_tensor(fdown):
-    return (fdown + np.einsum('ab...->ba...', fdown))/2
+    """Symmetrise a rank 2 tensor."""
+    return (fdown + np.einsum('ab... -> ba...', fdown))/2
     
     
 def antisymmetrise_tensor(fdown):
-    return (fdown - np.einsum('ab...->ba...', fdown))/2
+    """Antisymmetrise a rank 2 tensor."""
+    return (fdown - np.einsum('ab... -> ba...', fdown))/2
     
     
