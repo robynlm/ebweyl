@@ -689,6 +689,39 @@ class Weyl():
         G1 = np.einsum('acd..., db... -> cab...', Gudd3, fmixed3)
         G2 = - np.einsum('dcb..., ad... -> cab...', Gudd3, fmixed3)
         return df + G1 + G2
+    
+    def divergence_3_tensor2down3(self, Gudd3, fdown3):
+        """Compute divergence along n of a 3D rank 2 covariant tensor.
+        
+        Parameters : 
+            Gudd3 : (3, 3, 3, N, N, N) array_like 
+                    Spatial Christoffel symbol with one indice up and two down
+            fdown3 : (3, 3, N, N, N) array_like
+                     Rank 2 spatial tensor with both indices down
+        
+        Returns : 
+            (3, N, N, N) array_like
+        """
+        return np.einsum('ab..., abc... -> c...', self.gammaup3,
+                         self.covariant_derivatice_3_tensor2down3(Gudd3, fdown3))
+    
+    def curl_3_tensor2down3(self, ):
+        """Compute curl along n of a 3D rank 2 covariant tensor.
+        
+        Parameters : 
+            Gudd3 : (3, 3, 3, N, N, N) array_like 
+                    Spatial Christoffel symbol with one indice up and two down
+            fdown3 : (3, 3, N, N, N) array_like
+                     Rank 2 spatial tensor with both indices down
+        
+        Returns : 
+            (3, 3, N, N, N) array_like
+        """
+        Ddfdd = self.covariant_derivatice_3_tensor2down3(Gudd3, fdown3)
+        LCuud3 = np.einsum('ae..., bf..., d..., defc... -> abc...', 
+                           self.gup4, self.gup4, self.nup4, 
+                           self.levicivita_tensor_down4())[1:, 1:, 1:]
+        return symmetrise_tensor(np.einsum('cda...,cbd...->ab...',LCuud3, Ddfdd))
 
     def vector_projection4(self, a, b): 
         """Project vector b onto vector a."""        
@@ -831,4 +864,13 @@ def inverse4(f):
                       + tt*xy*xz + tx*tx*yz - tt*xx*yz), 
                      -ty*ty*xx + 2*tx*ty*xy - tt*xy*xy - tx*tx*yy + tt*xx*yy]])
     return fup / determinant4(f)
+    
+    
+def symmetrise_tensor(fdown):
+    return (fdown + np.einsum('ab...->ba...', fdown))/2
+    
+    
+def antisymmetrise_tensor(fdown):
+    return (fdown - np.einsum('ab...->ba...', fdown))/2
+    
     
