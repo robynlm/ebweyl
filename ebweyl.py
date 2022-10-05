@@ -533,19 +533,24 @@ class Weyl():
                                          self.ndown4, Bndown4)), LCudd4)
         return Cdown4    
                    
-    def weyl_psi_scalars(self, Cdown4):
+    def weyl_psi_scalars(self, Cdown4, uup4):
         """Compute Weyl scalars with an arbitrary null vector base.
         
         Parameters : 
             Cdown4 : (4, 4, 4, 4, N, N, N) array_like
                      Weyl tensor with all indices down.
                      You can get this from Weyl.weyl_tensor_down4(Endown3, Bndown3)
+            uup4 : (4, N, N, N) array_like
+                   Time-like unit vector used to define e0 in the tetrad base.
+                   You need to provide this, but you can use 
+                   Weyl.nup4 (the normal to the hypersurface), 
+                   or you can provide the fluid 4 velocity.
         
         Returns : 
             list : psi0, psi1, psi2, psi3, psi4
                    Each is (N, N, N) array_like complex
         """
-        lup4, kup4, mup4, mbup4 = self.null_vector_base()
+        lup4, kup4, mup4, mbup4 = self.null_vector_base(uup4)
         psi0 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
                          Cdown4, kup4, mup4, kup4, mup4)
         psi1 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
@@ -571,8 +576,15 @@ class Weyl():
         psi1 = psi1new
         return [psi0, psi1, psi2, psi3, psi4]
 
-    def null_vector_base(self):
+    def null_vector_base(self, uup4):
         """Return an arbitrary null vector base.
+        
+        Parameters : 
+            uup4 : (4, N, N, N) array_like
+                   Time-like unit vector used to define e0 in the tetrad base.
+                   You need to provide this, but you can use 
+                   Weyl.nup4 (the normal to the hypersurface), 
+                   or you can provide the fluid 4 velocity.
         
         Returns : 
             list : lup4, kup4, mup4, mbup4
@@ -583,7 +595,7 @@ class Weyl():
             by M. Alcubierre
             page 295
         """
-        e0up4, e1up4, e2up4, e3up4 = self.tetrad_base()
+        e0up4, e1up4, e2up4, e3up4 = self.tetrad_base(uup4)
         inverse_sqrt_2 = 1 / np.sqrt(2)
         kup4 = (e0up4+e1up4) * inverse_sqrt_2
         lup4 = (e0up4-e1up4) * inverse_sqrt_2
@@ -591,12 +603,19 @@ class Weyl():
         mbup4 = (e2up4-1j*e3up4) * inverse_sqrt_2
         return lup4, kup4, mup4, mbup4
 
-    def tetrad_base(self):
+    def tetrad_base(self, uup4):
         """Return an arbitrary orthonormal tetrad base.
         
         The first tetrad is the normal to the hypersurface.
         The others are arbitrarily chosen and made orthonormal 
         with the Gram-Schmidt scheme.
+        
+        Parameters : 
+            uup4 : (4, N, N, N) array_like
+                   Time-like unit vector used to define e0 in the tetrad base.
+                   You need to provide this, but you can use 
+                   Weyl.nup4 (the normal to the hypersurface), 
+                   or you can provide the fluid 4 velocity.
         
         Returns : 
             list : e0up4, e1up4, e2up4, e3up4
@@ -612,16 +631,18 @@ class Weyl():
         v2 = np.array([Box_0, Box_0, 1.0/np.sqrt(self.gdown4[2,2]), Box_0])
         v3 = np.array([Box_0, Box_0, Box_0, 1.0/np.sqrt(self.gdown4[3,3])])
 
-        e0up4 = self.nup4
+        e0up4 = uup4 
+        # I assume that the provided vector satisfies u_a u^a = -1
+        # without checking.        
         
-        u1 = v1 - self.vector_inner_product(e0up4, v1)*e0up4
+        u1 = v1 + self.vector_inner_product(e0up4, v1)*e0up4
         e1up4 = u1 / self.norm_rank1tensor4(u1)
         
-        u2 = (v2 - self.vector_inner_product(e0up4, v2)*e0up4 
+        u2 = (v2 + self.vector_inner_product(e0up4, v2)*e0up4 
               - self.vector_inner_product(e1up4, v2)*e1up4)
         e2up4 = u2 / self.norm_rank1tensor4(u2)
         
-        u3 = (v3 - self.vector_inner_product(e0up4, v3)*e0up4 
+        u3 = (v3 + self.vector_inner_product(e0up4, v3)*e0up4 
               - self.vector_inner_product(e1up4, v3)*e1up4
               - self.vector_inner_product(e2up4, v3)*e2up4)
         e3up4 = u3 / self.norm_rank1tensor4(u3)
