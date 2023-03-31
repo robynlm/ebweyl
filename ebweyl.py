@@ -88,56 +88,62 @@ def fd6_forward(f, i, inverse_dx):
     
     
 ###################################################################################
-# Finite differencing class applying the schemes to data box.
+# Finite differencing class applying the schemes to data grid.
 ###################################################################################
 
 
 class FiniteDifference():
-    """This class applies the FD schemes to the entire data box."""
-    def __init__(self, dx, N, periodic_boundary=True, fd_order6=False):
+    """This class applies the FD schemes to the entire data grid."""
+    def __init__(self, dxs, Ns, periodic_boundary=True, fd_order=4):
         """Define how FD schemes are to be applied. Define FDscheme.
         
         Parameters : 
-            dx : float, elementary grid size
-                 Here I assume dx = dy = dz
-            N : int, number of data points in the box
-                Here I assume that there is the same number of points 
-                in all 3 directions.
+            dxs : [dx, dy, dz] each a float
+                  elementary grid size in 3 directions
+            Ns : [Nx, Ny, Nz] each an int, 
+                number of data points in 3 directions.
             periodic_boundary : boolean, default True
                                 if true periodic boundaries are applied and a 
                                 centered FD scheme is used, 
                                 else a combination of forward + centered + backward 
                                 FD schemes are used.
-            fd_order6 : boolean, default False
-                        if true 6th order FD schemes are applied
-                        else 4th FD schemes are applied
+            fd_order : int, default 4
+                       if 6 then 6th order FD schemes are applied
+                       else 4th order FD schemes are applied
         """
-        self.N = N
+        self.Nx, self.Ny, self.Nz = Ns
         self.periodic_boundary = periodic_boundary
-        self.inverse_dx = 1 / dx
         
-        if fd_order6:
+        dx, dy, dz = dxs
+        self.inverse_dx = 1 / dx
+        self.inverse_dy = 1 / dy
+        self.inverse_dz = 1 / dz
+        
+        if fd_order == 6:
+            print("6th order finite difference schemes are defined")
             self.backward = fd6_backward
             self.centered = fd6_centered
             self.forward = fd6_forward
             self.mask_len = 3
         else:
+            print("4th order finite difference schemes are defined")
             self.backward = fd4_backward
             self.centered = fd4_centered
             self.forward = fd4_forward
             self.mask_len = 2
     
     def d3x(self, f): 
-        """Derivative along x of a scalar over a 3D box: \partial_x (f)."""
+        """Derivative along x of a scalar over a 3D grid: \partial_x (f)."""
         if self.periodic_boundary:
             # Periodic boundaries are used.
-            # The box is extended along the x direction by the 
+            # The grid is extended along the x direction by the 
             # FD mask number of points from the opposite edge.
             flong = np.concatenate((f[-self.mask_len:, :, :], f, 
                                     f[:self.mask_len, :, :]), axis=0)
-            # excluding the edge points.  We retrieve shape (N, N, N).
+            # excluding the edge points.  We retrieve shape (Nx, Ny, Nz).
             return np.array([self.centered(flong, ix, self.inverse_dx) 
-                             for ix in range(self.mask_len, self.N+self.mask_len)])
+                             for ix in range(self.mask_len, 
+                                             self.Nx+self.mask_len)])
         else:
             # There are no periodic boundaries so a combination
             # of backward centered and forward schemes are used.
@@ -149,64 +155,66 @@ class FiniteDifference():
             # by the boundary condition.
             central_part = np.array([self.centered(f, ix, self.inverse_dx) 
                                      for ix in range(self.mask_len, 
-                                                     self.N-self.mask_len)])
+                                                     self.Nx-self.mask_len)])
             # rhs : Apply the forward FD scheme to the edge points in the x
             # direction that can not use the centered FD scheme.
             rhs = np.array([self.backward(f, ix, self.inverse_dx) 
-                            for ix in range(self.N-self.mask_len, self.N)])
+                            for ix in range(self.Nx-self.mask_len, self.Nx)])
             # Concatenate all the points together
             return np.concatenate((lhs, central_part, rhs), axis=0)
     
     def d3y(self, f):  
-        """Derivative along y of a scalar over a 3D box: \partial_y (f)."""
+        """Derivative along y of a scalar over a 3D grid: \partial_y (f)."""
         # Same as D3x but as we apply the FD schemes in the y direction 
         # we loop over the x direction to access it.
         if self.periodic_boundary:
             flong = np.concatenate((f[:, -self.mask_len:, :], f, 
                                     f[:, :self.mask_len, :]), axis=1)
-            return np.array([[self.centered(flong[ix, :, :], iy, self.inverse_dx) 
-                              for iy in range(self.mask_len, self.N+self.mask_len)] 
-                             for ix in range(self.N)])
+            return np.array([[self.centered(flong[ix, :, :], iy, self.inverse_dy) 
+                              for iy in range(self.mask_len, 
+                                              self.Ny+self.mask_len)] 
+                             for ix in range(self.Nx)])
         else:
-            lhs = np.array([[self.forward(f[ix, :, :], iy, self.inverse_dx) 
+            lhs = np.array([[self.forward(f[ix, :, :], iy, self.inverse_dy) 
                              for iy in range(0, self.mask_len)] 
-                            for ix in range(self.N)])
+                            for ix in range(self.Nx)])
             central_part = np.array([[self.centered(f[ix, :, :], iy, 
-                                                    self.inverse_dx) 
+                                                    self.inverse_dy) 
                                       for iy in range(self.mask_len, 
-                                                      self.N-self.mask_len)] 
-                                     for ix in range(self.N)])
-            rhs = np.array([[self.backward(f[ix, :, :], iy, self.inverse_dx) 
-                             for iy in range(self.N-self.mask_len, self.N)] 
-                            for ix in range(self.N)])
+                                                      self.Ny-self.mask_len)] 
+                                     for ix in range(self.Nx)])
+            rhs = np.array([[self.backward(f[ix, :, :], iy, self.inverse_dy) 
+                             for iy in range(self.Ny-self.mask_len, self.Ny)] 
+                            for ix in range(self.Nx)])
             return np.concatenate((lhs, central_part, rhs), axis=1)
     
     def d3z(self, f):  
-        """Derivative along z of a scalar over a 3D box: \partial_z (f)."""
+        """Derivative along z of a scalar over a 3D grid: \partial_z (f)."""
         # Same as D3x but as we apply the FD schemes in the z direction 
         # we loop over the x and y directions to access it.
         if self.periodic_boundary:
             flong = np.concatenate((f[:, :, -self.mask_len:], f, 
                                     f[:, :, :self.mask_len]), axis=2)
-            return np.array([[[self.centered(flong[ix, iy, :], iz, self.inverse_dx) 
+            return np.array([[[self.centered(flong[ix, iy, :], iz, self.inverse_dz) 
                                for iz in range(self.mask_len, 
-                                               self.N+self.mask_len)] 
-                              for iy in range(self.N)] 
-                             for ix in range(self.N)])
+                                               self.Nz+self.mask_len)] 
+                              for iy in range(self.Ny)] 
+                             for ix in range(self.Nx)])
         else:
-            lhs = np.array([[[self.forward(f[ix, iy, :], iz, self.inverse_dx) 
+            lhs = np.array([[[self.forward(f[ix, iy, :], iz, self.inverse_dz) 
                               for iz in range(0, self.mask_len)] 
-                             for iy in range(self.N)] 
-                            for ix in range(self.N)])
+                             for iy in range(self.Ny)] 
+                            for ix in range(self.Nx)])
             central_part = np.array([[[self.centered(f[ix, iy, :], iz, 
-                                                     self.inverse_dx) 
+                                                     self.inverse_dz) 
                                        for iz in range(self.mask_len, 
-                                                       self.N-self.mask_len)] 
-                                      for iy in range(self.N)] 
-                                     for ix in range(self.N)])
-            rhs = np.array([[[self.backward(f[ix, iy, :], iz, self.inverse_dx) 
-                              for iz in range(self.N-self.mask_len, self.N)] 
-                             for iy in range(self.N)] for ix in range(self.N)])
+                                                       self.Nz-self.mask_len)] 
+                                      for iy in range(self.Ny)] 
+                                     for ix in range(self.Nx)])
+            rhs = np.array([[[self.backward(f[ix, iy, :], iz, self.inverse_dz) 
+                              for iz in range(self.Nz-self.mask_len, self.Nz)] 
+                             for iy in range(self.Ny)] 
+                            for ix in range(self.Nx)])
             return np.concatenate((lhs, central_part, rhs), axis=2)
     
     
@@ -247,17 +255,17 @@ class Weyl():
     of the Weyl tensor and the invariant scalars used for the 
     Petrov classification of spacetime.
     """
-    def __init__(self, FD, gdown4, Kdown4):
+    def __init__(self, FD, gdown4, Kdown3):
         """Compute 3+1 terms needed in the computations provided by this class.
         
         Parameters : 
             FD : Finite difference class
-            gdown4 : (4, 4, N, N, N) array_like
+            gdown4 : (4, 4, Nx, Ny, Nz) array_like
                      Spacetime metric with both indices down
-                     in every position of the data box.
-            Kdown4 : (4, 4, N, N, N) array_like
+                     in every position of the data grid.
+            Kdown3 : (3, 3, Nx, Ny, Nz) array_like
                      Extrinsic curvature with both indices down
-                     in every position of the data box.
+                     in every position of the data grid.
         """
         self.FD = FD
         
@@ -276,19 +284,19 @@ class Weyl():
         self.alpha = np.sqrt(np.einsum('k..., k... -> ...', 
                                        self.betadown3, self.betaup3) 
                              - gdown4[0, 0])
-        Box_0 = np.zeros(np.shape(self.alpha))
+        zeros = np.zeros(np.shape(self.alpha))
         # Normal to the hypersurface
-        self.ndown4 = np.array([-self.alpha, Box_0, Box_0, Box_0])
-        self.nup4 = np.array([Box_0 + 1.0, -self.betaup3[0],
+        self.ndown4 = np.array([-self.alpha, zeros, zeros, zeros])
+        self.nup4 = np.array([zeros + 1.0, -self.betaup3[0],
                               -self.betaup3[1], -self.betaup3[2]])/self.alpha
         # Extrinsic curvature
-        self.Kdown3 = Kdown4[1:,1:]
+        self.Kdown3 = Kdown3
         
     def christoffel_symbol_udd3(self):
         """Compute Christoffel symbols for the spatial metric.
         
         Returns : 
-            (3, 3, 3, N, N, N) array_like 
+            (3, 3, 3, Nx, Ny, Nz) array_like 
             With one indice up and two down : \Gamma^{i}_{kl}
         """
         # First the spatial derivatives of the metric derivative are computed.
@@ -325,12 +333,12 @@ class Weyl():
         """Compute spatial Ricci tensor with both indices down.
         
         Parameters : 
-            Gudd3 : (3, 3, 3, N, N, N) array_like 
+            Gudd3 : (3, 3, 3, Nx, Ny, Nz) array_like 
                     Spatial Christoffel symbol with one indice up and two down
                     You can get this from Weyl.christoffel_symbol_udd3()
                 
         Returns : 
-            (3, 3, N, N, N) array_like
+            (3, 3, Nx, Ny, Nz) array_like
         
         """
         Rterm0 = np.array([[self.FD.d3x(Gudd3[0, j, k])
@@ -351,15 +359,15 @@ class Weyl():
         u^{\mu} : chosen time-like vector
         
         Parameters : 
-            Cdown4 : (4, 4, 4, 4, N, N, N) array_like
+            Cdown4 : (4, 4, 4, 4, Nx, Ny, Nz) array_like
                      4D Weyl tensor with all indices down.
                      You can get this from Weyl.weyl_tensor_down4(Endown3, Bndown3)
-            uup4 : (4, N, N, N) array_like
+            uup4 : (4, Nx, Ny, Nz) array_like
                    Time-like vector with indice up
                    You need to provide this
                 
         Returns : 
-            (4, 4, N, N, N) array_like
+            (4, 4, Nx, Ny, Nz) array_like
         """
         return np.einsum('b..., d..., abcd... -> ac...', uup4, uup4, Cdown4)
     
@@ -369,17 +377,17 @@ class Weyl():
         n^{\mu} : the normal to the hypersurface.
         
         Parameters : 
-            Ricci3down3 : (3, 3, N, N, N) array_like 
+            Ricci3down3 : (3, 3, Nx, Ny, Nz) array_like 
                           Spatial Ricci tensor with both indices down
                           You can get this from Weyl.ricci_tensor_down3(Gudd3)
             kappa : float, Einstein's constant = 8 * pi * G / c^4
                     You need to provide this.
-            Tdown4 : (4, 4, N, N, N) array_like
+            Tdown4 : (4, 4, Nx, Ny, Nz) array_like
                      Spacetime stress-energy tensor with both indices down
                      You need to provide this
                 
         Returns : 
-            (3, 3, N, N, N) array_like
+            (3, 3, Nx, Ny, Nz) array_like
         """
         # 1st compute K terms
         Kmixed3 = np.einsum('ij..., jk... -> ik...', self.gammaup3, self.Kdown3)
@@ -412,15 +420,15 @@ class Weyl():
         u^{\mu} : chosen time-like vector
         
         Parameters : 
-            Cdown4 : (4, 4, 4, 4, N, N, N) array_like
+            Cdown4 : (4, 4, 4, 4, Nx, Ny, Nz) array_like
                      4D Weyl tensor with all indices down.
                      You can get this from Weyl.weyl_tensor_down4(Endown3, Bndown3)
-            uup4 : (4, N, N, N) array_like
+            uup4 : (4, Nx, Ny, Nz) array_like
                    Time-like vector with indice up
                    You need to provide this
                 
         Returns : 
-            (4, 4, N, N, N) array_like
+            (4, 4, Nx, Ny, Nz) array_like
         """
         LCuudd4 = np.einsum('ac..., bd..., abef... -> cdef...', 
                             self.gup4, self.gup4, self.levicivita_tensor_down4())
@@ -434,12 +442,12 @@ class Weyl():
         n^{\mu} : the normal to the hypersurface.
         
         Parameters : 
-            Gudd3 : (3, 3, 3, N, N, N) array_like 
+            Gudd3 : (3, 3, 3, Nx, Ny, Nz) array_like 
                     Spatial Christoffel symbol with one indice up and two down
                     You can get this from Weyl.christoffel_symbol_udd3()
                 
         Returns : 
-            (3, 3, N, N, N) array_like
+            (3, 3, Nx, Ny, Nz) array_like
         """
         LCuud3 = np.einsum('ae..., bf..., d..., defc... -> abc...', 
                            self.gup4, self.gup4, self.nup4, 
@@ -464,10 +472,10 @@ class Weyl():
         """Compute spacetime tensor from the spatial tensor.
         
         Parameters : 
-            fdown3 : (3, 3, N, N, N) array_like
+            fdown3 : (3, 3, Nx, Ny, Nz) array_like
         
         Returns : 
-            (4, 4, N, N, N) array_like
+            (4, 4, Nx, Ny, Nz) array_like
             
         Note : 
             By definition {}^{(n)}E^{\alpha\beta} only has spatial components, 
@@ -494,16 +502,16 @@ class Weyl():
         """Compute Weyl tensor with all indices down.
         
         Parameters : 
-            Endown3 : (3, 3, N, N, N) array_like
+            Endown3 : (3, 3, Nx, Ny, Nz) array_like
                       You can get this from 
                       Weyl.eweyl_n_tensor_down3(Ricci3down3, kappa, Tdown4)
-            Bndown3 : (3, 3, N, N, N) array_like
+            Bndown3 : (3, 3, Nx, Ny, Nz) array_like
                       Electric and magnetic parts of the Weyl tensor 
                       projected along the normal to the hypersurface.
                       You can get this from Weyl.bweyl_n_tensor_down3(Gudd3)
         
         Returns : 
-            (4, 4, 4, 4, N, N, N) array_like
+            (4, 4, 4, 4, Nx, Ny, Nz) array_like
         
         Reference : 
             'Introduction to 3+1 Numerical Relativity' 2008
@@ -537,10 +545,10 @@ class Weyl():
         """Compute Weyl scalars with an arbitrary null vector base.
         
         Parameters : 
-            Cdown4 : (4, 4, 4, 4, N, N, N) array_like
+            Cdown4 : (4, 4, 4, 4, Nx, Ny, Nz) array_like
                      Weyl tensor with all indices down.
                      You can get this from Weyl.weyl_tensor_down4(Endown3, Bndown3)
-            uup4 : (4, N, N, N) array_like
+            uup4 : (4, Nx, Ny, Nz) array_like
                    Time-like unit vector used to define e0 in the tetrad base.
                    You need to provide this, but you can use 
                    Weyl.nup4 (the normal to the hypersurface), 
@@ -548,7 +556,7 @@ class Weyl():
         
         Returns : 
             list : psi0, psi1, psi2, psi3, psi4
-                   Each is (N, N, N) array_like complex
+                   Each is (Nx, Ny, Nz) array_like complex
         """
         lup4, kup4, mup4, mbup4 = self.null_vector_base(uup4)
         psi0 = np.einsum('abcd..., a..., b..., c..., d... -> ...', 
@@ -580,7 +588,7 @@ class Weyl():
         """Return an arbitrary null vector base.
         
         Parameters : 
-            uup4 : (4, N, N, N) array_like
+            uup4 : (4, Nx, Ny, Nz) array_like
                    Time-like unit vector used to define e0 in the tetrad base.
                    You need to provide this, but you can use 
                    Weyl.nup4 (the normal to the hypersurface), 
@@ -588,7 +596,7 @@ class Weyl():
         
         Returns : 
             list : lup4, kup4, mup4, mbup4
-                   Each is (4, N, N, N) array_like complex
+                   Each is (4, Nx, Ny, Nz) array_like complex
         
         Reference : 
             'Introduction to 3+1 Numerical Relativity' 2008
@@ -611,7 +619,7 @@ class Weyl():
         with the Gram-Schmidt scheme.
         
         Parameters : 
-            uup4 : (4, N, N, N) array_like
+            uup4 : (4, Nx, Ny, Nz) array_like
                    Time-like unit vector used to define e0 in the tetrad base.
                    You need to provide this, but you can use 
                    Weyl.nup4 (the normal to the hypersurface), 
@@ -619,17 +627,17 @@ class Weyl():
         
         Returns : 
             list : e0up4, e1up4, e2up4, e3up4
-                   Each is (4, N, N, N) array_like      
+                   Each is (4, Nx, Ny, Nz) array_like      
                    
         Reference :
             See Chapter 7 of 
             'Linear Algebra, Theory and applications' by W.Cheney and D.Kincaid
             for Gram-Schmidt scheme
         """
-        Box_0 = np.zeros(np.shape(self.alpha))
-        v1 = np.array([Box_0, 1.0/np.sqrt(self.gdown4[1,1]), Box_0, Box_0])
-        v2 = np.array([Box_0, Box_0, 1.0/np.sqrt(self.gdown4[2,2]), Box_0])
-        v3 = np.array([Box_0, Box_0, Box_0, 1.0/np.sqrt(self.gdown4[3,3])])
+        zeros = np.zeros(np.shape(self.alpha))
+        v1 = np.array([zeros, 1.0/np.sqrt(self.gdown4[1,1]), zeros, zeros])
+        v2 = np.array([zeros, zeros, 1.0/np.sqrt(self.gdown4[2,2]), zeros])
+        v3 = np.array([zeros, zeros, zeros, 1.0/np.sqrt(self.gdown4[3,3])])
 
         e0up4 = uup4 
         # I assume that the provided vector satisfies u_a u^a = -1
@@ -654,12 +662,12 @@ class Weyl():
         
         Parameters : 
             Psis : [psi0, psi1, psi2, psi3, psi4]
-                   Each is a (N, N, N) array_like complex
+                   Each is a (Nx, Ny, Nz) array_like complex
                    You can get this from Weyl.weyl_psi_scalars(Cdown4)
         
         Returns : 
             dictionary : I, J, L, K, N
-                         Each is a (N, N, N) array_like complex.
+                         Each is a (Nx, Ny, Nz) array_like complex.
         
         Reference : 
             'Exact Solutions to Einstein's Field Equations' 2nd edition 2003 
@@ -680,10 +688,10 @@ class Weyl():
         Covariant derivative with respects to the spatial metric.
         
         Parameters : 
-            f : (N, N, N) array_like
+            f : (Nx, Ny, Nz) array_like
         
         Returns : 
-            (3, N, N, N) array_like
+            (3, Nx, Ny, Nz) array_like
              ^-- new indice from the derivation
         """
         return self.FD.d3_scalar(f)
@@ -694,14 +702,14 @@ class Weyl():
         Covariant derivative with respects to the spatial metric.
         
         Parameters : 
-            Gudd3 : (3, 3, 3, N, N, N) array_like 
+            Gudd3 : (3, 3, 3, Nx, Ny, Nz) array_like 
                     Spatial Christoffel symbol with one indice up and two down
                     You can get this from Weyl.christoffel_symbol_udd3()
-            fdown3 : (3, 3, N, N, N) array_like
+            fdown3 : (3, 3, Nx, Ny, Nz) array_like
                      Rank 2 spatial tensor with both indices down
         
         Returns : 
-            (3, 3, 3, N, N, N) array_like
+            (3, 3, 3, Nx, Ny, Nz) array_like
                 ^--^-- fdown3 indices
              ^-- new indice from the derivation
         """
@@ -716,14 +724,14 @@ class Weyl():
         Covariant derivative with respects to the spatial metric.
         
         Parameters : 
-            Gudd3 : (3, 3, 3, N, N, N) array_like 
+            Gudd3 : (3, 3, 3, Nx, Ny, Nz) array_like 
                     Spatial Christoffel symbol with one indice up and two down
                     You can get this from Weyl.christoffel_symbol_udd3()
-            fmixed3 : (3, 3, N, N, N) array_like
+            fmixed3 : (3, 3, Nx, Ny, Nz) array_like
                       Rank 2 spatial tensor with one indice up and the other down
         
         Returns : 
-            (3, 3, 3, N, N, N) array_like
+            (3, 3, 3, Nx, Ny, Nz) array_like
                 ^--^-- fmixed3 indices
              ^-- new indice from the derivation
         """
@@ -736,14 +744,14 @@ class Weyl():
         """Compute divergence along n of a 3D rank 2 covariant tensor.
         
         Parameters : 
-            Gudd3 : (3, 3, 3, N, N, N) array_like 
+            Gudd3 : (3, 3, 3, Nx, Ny, Nz) array_like 
                     Spatial Christoffel symbol with one indice up and two down
                     You can get this from Weyl.christoffel_symbol_udd3()
-            fdown3 : (3, 3, N, N, N) array_like
+            fdown3 : (3, 3, Nx, Ny, Nz) array_like
                      Rank 2 spatial tensor with both indices down
         
         Returns : 
-            (3, N, N, N) array_like
+            (3, Nx, Ny, Nz) array_like
         """
         return np.einsum('ab..., abc... -> c...', self.gammaup3,
                          self.covariant_derivatice_3_tensor2down3(Gudd3, fdown3))
@@ -752,14 +760,14 @@ class Weyl():
         """Compute curl along n of a 3D rank 2 covariant tensor.
         
         Parameters : 
-            Gudd3 : (3, 3, 3, N, N, N) array_like 
+            Gudd3 : (3, 3, 3, Nx, Ny, Nz) array_like 
                     Spatial Christoffel symbol with one indice up and two down
                     You can get this from Weyl.christoffel_symbol_udd3()
-            fdown3 : (3, 3, N, N, N) array_like
+            fdown3 : (3, 3, Nx, Ny, Nz) array_like
                      Rank 2 spatial tensor with both indices down
         
         Returns : 
-            (3, 3, N, N, N) array_like
+            (3, 3, Nx, Ny, Nz) array_like
         """
         Ddfdd = self.covariant_derivatice_3_tensor2down3(Gudd3, fdown3)
         LCuud3 = np.einsum('ae..., bf..., d..., defc... -> abc...', 
@@ -804,7 +812,7 @@ class Weyl():
 
     def levicivita_symbol_down4(self): 
         """Compute spacetime Levi-Civita symbol with 4 4D indices down."""
-        LC = np.zeros((4, 4, 4, 4, self.FD.N, self.FD.N, self.FD.N))
+        LC = np.zeros((4, 4, 4, 4, self.FD.Nx, self.FD.Ny, self.FD.Nz))
         allindices = [0, 1, 2, 3]
         for i0 in allindices:
             for i1 in np.delete(allindices, i0):
@@ -829,11 +837,11 @@ def getcomponents3(f):
     This assumes this tensor is symmetric.
     
     Parameters : 
-        f : (3, 3, N, N, N) array_like
+        f : (3, 3, Nx, Ny, Nz) array_like
     
     Returns : 
         list : xx, xy, xz, yy, yz, zz
-               Each is (N, N, N) array_like
+               Each is (Nx, Ny, Nz) array_like
     """
     return [f[0, 0], f[0, 1], f[0, 2], f[1, 1], f[1, 2], f[2, 2]]
                    
@@ -844,11 +852,11 @@ def getcomponents4(f):
     This assumes this tensor is symmetric.
     
     Parameters : 
-        f : (4, 4, N, N, N) array_like
+        f : (4, 4, Nx, Ny, Nz) array_like
     
     Returns : 
         list : tt, tx, ty, tz, xx, xy, xz, yy, yz, zz
-               Each is (N, N, N) array_like
+               Each is (Nx, Ny, Nz) array_like
     """
     return [f[0, 0], f[0, 1], f[0, 2], f[0, 3], 
             f[1, 1], f[1, 2], f[1, 3], 
@@ -856,13 +864,13 @@ def getcomponents4(f):
     
                    
 def determinant3(f):
-    """Compute determinant 3x3 matrice in every position of the data box."""
+    """Compute determinant 3x3 matrice in every position of the data grid."""
     xx, xy, xz, yy, yz, zz = getcomponents3(f)
     return -xz*xz*yy + 2*xy*xz*yz - xx*yz*yz - xy*xy*zz + xx*yy*zz
                    
                    
 def determinant4(f):
-    """Compute determinant of a 4x4 matrice in every position of the data box."""
+    """Compute determinant of a 4x4 matrice in every position of the data grid."""
     tt, tx, ty, tz, xx, xy, xz, yy, yz, zz = getcomponents4(f)
     return (tz*tz*xy*xy - 2*ty*tz*xy*xz + ty*ty*xz*xz 
             - tz*tz*xx*yy + 2*tx*tz*xz*yy - tt*xz*xz*yy 
@@ -873,7 +881,7 @@ def determinant4(f):
 
                    
 def inverse3(f):
-    """Compute inverse of a 3x3 matrice in every position of the data box."""
+    """Compute inverse of a 3x3 matrice in every position of the data grid."""
     xx, xy, xz, yy, yz, zz = getcomponents3(f)
     fup = np.array([[yy*zz - yz*yz, -(xy*zz - yz*xz), xy*yz - yy*xz], 
                     [-(xy*zz - xz*yz), xx*zz - xz*xz, -(xx*yz - xy*xz)],
@@ -882,7 +890,7 @@ def inverse3(f):
                    
                    
 def inverse4(f):
-    """Compute inverse of a 4x4 matrice in every position of the data box."""
+    """Compute inverse of a 4x4 matrice in every position of the data grid."""
     tt, tx, ty, tz, xx, xy, xz, yy, yz, zz = getcomponents4(f)
     fup = np.array([[-xz*xz*yy + 2*xy*xz*yz - xx*yz*yz - xy*xy*zz + xx*yy*zz, 
                      (tz*xz*yy - tz*xy*yz - ty*xz*yz 
