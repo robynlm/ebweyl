@@ -1,0 +1,49 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: EBWeyl
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: 'Robyn '
+    family-names: Munoz
+    email: robyn.munoz@yahoo.fr
+    orcid: 'https://orcid.org/0000-0003-3345-8520'
+    affiliation: University of Sussex
+  - given-names: Marco
+    family-names: Bruni
+    email: marco.bruni@port.ac.uk
+    affiliation: University of Portsmouth
+    orcid: 'https://orcid.org/0000-0003-2305-5699'
+identifiers:
+  - type: doi
+    value: 10.1088/1361-6382/acd6cf
+  - type: other
+    value: 'arXiv: gr-qc/2211.08133'
+repository-code: 'https://github.com/robynlm/ebweyl'
+abstract: >-
+  EBWeyl computes the electric and magnetic parts of the
+  Weyl tensor, Eαβ and Bαβ, using a 3+1 slicing formulation.
+  The module provides a Finite Differencing class with 4th
+  (default) and 6th order backward, centered, and forward
+  schemes. Periodic boundary conditions are used by default;
+  otherwise, a combination of the 3 schemes is available. It
+  also includes a Weyl class that computes for a given
+  metric the variables of the 3+1 formalism, the spatial
+  Christoffel symbols, spatial Ricci tensor, electric and
+  magnetic parts of the Weyl tensor projected along the
+  normal to the hypersurface and fluid flow, the Weyl
+  scalars and invariant scalars. EBWeyl can also compute the
+  determinant and inverse of a 3x3 or 4x4 matrice in every
+  position of a data box.
+keywords:
+  - Gravito-electromaagnetism
+  - Weyl
+  - Invariant
+  - Numerical Relativity
+  - Newman-Penrose
+license: GPL-3.0-or-later
+date-released: '2023-03-31'
